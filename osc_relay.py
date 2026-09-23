@@ -62,7 +62,7 @@ class OscRelayHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 12340
-    server = HTTPServer(("localhost", port), OscRelayHandler)
+    server = HTTPServer(("0.0.0.0", port), OscRelayHandler)
     print(f"OSC relay + web server listening on http://localhost:{port}")
     server.serve_forever()
 
