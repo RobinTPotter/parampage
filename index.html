@@ -1,69 +1,27 @@
 <html>
 
 <head>
-    <title>My Page</title>
+    <title>My Param Page</title>
 </head>
 
 <body>
 
 <script>
-    // OSC packet building, mirrors osc-ref.py's osc_pad/build_osc
-    function oscPad(bytes) {
-        let padded = new Uint8Array(bytes.length + (4 - (bytes.length % 4)));
-        padded.set(bytes);
-        return padded;
-    }
-
-    function concatBytes(chunks) {
-        let total = chunks.reduce((sum, c) => sum + c.length, 0);
-        let out = new Uint8Array(total);
-        let offset = 0;
-        chunks.forEach(c => {
-            out.set(c, offset);
-            offset += c.length;
-        });
-        return out;
-    }
-
-    function buildOscMessage(address, args) {
-        let encoder = new TextEncoder();
-        let chunks = [oscPad(encoder.encode(address))];
-        let tags = ",";
-        let payloadChunks = [];
-
-        args.forEach(a => {
-            if (typeof a === "number" && Number.isInteger(a)) {
-                tags += "i";
-                let buf = new ArrayBuffer(4);
-                new DataView(buf).setInt32(0, a, false);
-                payloadChunks.push(new Uint8Array(buf));
-            } else if (typeof a === "number") {
-                tags += "f";
-                let buf = new ArrayBuffer(4);
-                new DataView(buf).setFloat32(0, a, false);
-                payloadChunks.push(new Uint8Array(buf));
-            } else {
-                tags += "s";
-                payloadChunks.push(oscPad(encoder.encode(String(a))));
-            }
-        });
-
-        chunks.push(oscPad(encoder.encode(tags)));
-        chunks.push(...payloadChunks);
-        return concatBytes(chunks);
-    }
-
-    function sendOsc(url, address, args) {
-        let msg = buildOscMessage(address, args);
-        return fetch(url, {
+    // Browsers can't open raw UDP sockets, so we POST JSON to a local
+    // HTTP relay (see osc_relay.py) which forwards it as a real OSC/UDP packet.
+    function sendOsc(relayUrl, ip, port, address, args) {
+        return fetch(relayUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: msg
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ip, port, address, args })
         }).catch(err => console.error("OSC send failed:", err));
     }
 
     let params = (new URLSearchParams(window.location.search).get("params") || "range.0.100.1./param a1").split(",");
-    let sendto = (new URLSearchParams(window.location.search).get("sendto") || "http://192.168.1.174:57120");
+    // sendto identifies the real OSC/UDP target; relay is the local HTTP bridge
+    let sendto = (new URLSearchParams(window.location.search).get("sendto") || "192.168.1.174:57120");
+    let [oscIp, oscPort] = sendto.replace(/^https?:\/\//, "").split(":");
+    let relay = (new URLSearchParams(window.location.search).get("relay") || "/osc");
     let body = document.body;
     body.innerHTML = "<h1>Parameters</h1><ul>" + params.map(p => "<li>" + p + "</li>").join("") + "</ul>";
     body.innerHTML += "<h1>Send To</h1><p>" + sendto + "</p>";
@@ -110,7 +68,7 @@
             button.innerHTML = "Send";
             button.addEventListener("click", () => {
                 let value = type == "range" ? parseFloat(input.value) : input.value;
-                sendOsc(sendto, address, [value]);
+                sendOsc(relay, oscIp, parseInt(oscPort), address, [value]);
             });
 
             form.appendChild(button);
