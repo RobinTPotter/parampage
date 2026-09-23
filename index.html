@@ -1,0 +1,125 @@
+<html>
+
+<head>
+    <title>My Page</title>
+</head>
+
+<body>
+
+<script>
+    // OSC packet building, mirrors osc-ref.py's osc_pad/build_osc
+    function oscPad(bytes) {
+        let padded = new Uint8Array(bytes.length + (4 - (bytes.length % 4)));
+        padded.set(bytes);
+        return padded;
+    }
+
+    function concatBytes(chunks) {
+        let total = chunks.reduce((sum, c) => sum + c.length, 0);
+        let out = new Uint8Array(total);
+        let offset = 0;
+        chunks.forEach(c => {
+            out.set(c, offset);
+            offset += c.length;
+        });
+        return out;
+    }
+
+    function buildOscMessage(address, args) {
+        let encoder = new TextEncoder();
+        let chunks = [oscPad(encoder.encode(address))];
+        let tags = ",";
+        let payloadChunks = [];
+
+        args.forEach(a => {
+            if (typeof a === "number" && Number.isInteger(a)) {
+                tags += "i";
+                let buf = new ArrayBuffer(4);
+                new DataView(buf).setInt32(0, a, false);
+                payloadChunks.push(new Uint8Array(buf));
+            } else if (typeof a === "number") {
+                tags += "f";
+                let buf = new ArrayBuffer(4);
+                new DataView(buf).setFloat32(0, a, false);
+                payloadChunks.push(new Uint8Array(buf));
+            } else {
+                tags += "s";
+                payloadChunks.push(oscPad(encoder.encode(String(a))));
+            }
+        });
+
+        chunks.push(oscPad(encoder.encode(tags)));
+        chunks.push(...payloadChunks);
+        return concatBytes(chunks);
+    }
+
+    function sendOsc(url, address, args) {
+        let msg = buildOscMessage(address, args);
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: msg
+        }).catch(err => console.error("OSC send failed:", err));
+    }
+
+    let params = (new URLSearchParams(window.location.search).get("params") || "range.0.100.1./param a1").split(",");
+    let sendto = (new URLSearchParams(window.location.search).get("sendto") || "http://192.168.1.174:57120");
+    let body = document.body;
+    body.innerHTML = "<h1>Parameters</h1><ul>" + params.map(p => "<li>" + p + "</li>").join("") + "</ul>";
+    body.innerHTML += "<h1>Send To</h1><p>" + sendto + "</p>";
+    setTimeout(() => {
+        body.innerHTML ="";
+        let form = document.createElement("form");
+        body.appendChild(form);
+        params.forEach(p => {
+            // split params into parts by . type.min.max.division.address
+            // if type is slider, use min, max, and division for input attributes
+            // and create a slider input element
+            // labeleld for the address
+            let parts = p.split(".");
+            let type = parts[0];
+            let min = parts[1];
+            let max = parts[2];
+            let division = parts[3];
+            let address = parts[4]; 
+            
+            let label = document.createElement("label");
+            label.innerHTML = address;
+            form.appendChild(label);
+
+            let input = document.createElement("input");
+            input.type = type;
+            if (type == "range") {
+                input.min = min;
+                input.max = max;
+                input.step = division;
+            }
+            input.name = p;
+            input.value = min;
+            form.appendChild(input);
+            // add another label for the value which needs to update
+            let valueLabel = document.createElement("label");
+            valueLabel.innerHTML = input.value;
+            form.appendChild(valueLabel);
+            input.addEventListener("input", () => {
+                valueLabel.innerHTML = input.value;
+            });
+            // send the current value to the osc server at the parameter's address
+            let button = document.createElement("button");
+            button.type = "button";
+            button.innerHTML = "Send";
+            button.addEventListener("click", () => {
+                let value = type == "range" ? parseFloat(input.value) : input.value;
+                sendOsc(sendto, address, [value]);
+            });
+
+            form.appendChild(button);
+            form.appendChild(document.createElement("br"));
+        });
+    }, 2000);
+</script>
+
+
+</body>
+
+</html>
