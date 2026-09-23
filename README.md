@@ -17,7 +17,7 @@ run:
 python osc_relay.py
 ```
 
-and visit http://localhost:12340?param=range:0:100:1:/param a1,range:0:1:0.01:/param a2
+and visit http://localhost:12340?param=range:0:100:1:/param%20a1,range:0:1:0.01:/param%20a2
 
 python serves static content but delivers osc
 message to 57120 based on params.
