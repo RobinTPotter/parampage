@@ -39,10 +39,10 @@
             let min = parts[1];
             let max = parts[2];
             let division = parts[3];
-            let address = parts[4]; 
+            let address_name = parts[4]; 
             
             let label = document.createElement("label");
-            label.innerHTML = address;
+            label.innerHTML = address_name;
             form.appendChild(label);
 
             let input = document.createElement("input");
@@ -68,7 +68,8 @@
             button.innerHTML = "Send";
             button.addEventListener("click", () => {
                 let value = type == "range" ? parseFloat(input.value) : input.value;
-                sendOsc(relay, oscIp, parseInt(oscPort), address, [value]);
+                let [address, name] = address_name.split(" ");
+                sendOsc(relay, oscIp, parseInt(oscPort), address, [name,value]);
             });
 
             form.appendChild(button);
