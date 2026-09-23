@@ -69,6 +69,7 @@
             button.addEventListener("click", () => {
                 let value = type == "range" ? parseFloat(input.value) : input.value;
                 let [address, name] = address_name.split(" ");
+                console.log(`Sending OSC to ${address} with args: [${name}, ${value}]`);
                 sendOsc(relay, oscIp, parseInt(oscPort), address, [name,value]);
             });
 
