@@ -3,6 +3,7 @@
 <head>
     <title>My Param Page</title>
     <style>
+        img { width:100%; }
         form {
             display: flex;
             flex-direction: column;
@@ -39,7 +40,7 @@
 </head>
 
 <body>
-
+<img src="parampage.jpg">
 <script>
     // Browsers can't open raw UDP sockets, so we POST JSON to a local
     // HTTP relay (see osc_relay.py) which forwards it as a real OSC/UDP packet.
@@ -57,10 +58,10 @@
     let [oscIp, oscPort] = sendto.replace(/^https?:\/\//, "").split(":");
     let relay = (new URLSearchParams(window.location.search).get("relay") || "/osc");
     let body = document.body;
-    body.innerHTML = "<h1>Parameters</h1><ul>" + params.map(p => "<li>" + p + "</li>").join("") + "</ul>";
+    body.innerHTML = '<img src="parampage.jpg"><h1>Parameters</h1><ul>' + params.map(p => "<li>" + p + "</li>").join("") + "</ul>";
     body.innerHTML += "<h1>Send To</h1><p>" + sendto + "</p>";
     setTimeout(() => {
-        body.innerHTML ="";
+        body.innerHTML ='<img src="parampage.jpg">';
         let form = document.createElement("form");
         body.appendChild(form);
         params.forEach(p => {
