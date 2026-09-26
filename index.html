@@ -3,7 +3,7 @@
 <head>
     <title>My Param Page</title>
     <style>
-        img { width:100%; }
+        img { width:20%; align: center }
         form {
             display: flex;
             flex-direction: column;
@@ -52,7 +52,7 @@
         }).catch(err => console.error("OSC send failed:", err));
     }
 
-    let params = (new URLSearchParams(window.location.search).get("params") || "range:0:100:1:/param a1,button:/voice sine,button:/note pressed 60,button:/note released 60").split(",");
+    let params = (new URLSearchParams(window.location.search).get("params") || "range:0:100:1:/param a1,button:/voice pressed sine,button:/note pressed 60,button:/note released 60").split(",");
     // sendto identifies the real OSC/UDP target; relay is the local HTTP bridge
     let sendto = (new URLSearchParams(window.location.search).get("sendto") || "192.168.1.174:57120");
     let [oscIp, oscPort] = sendto.replace(/^https?:\/\//, "").split(":");
@@ -92,23 +92,32 @@
                 input.min = min;
                 input.max = max;
                 input.step = division;
-                input.value = min;
-                // add another label for the value which needs to update
-                valueLabel = document.createElement("label");
-                valueLabel.className = "value";
+            }
+
+            input.value = min;
+            // add another label for the value which needs to update
+            valueLabel = document.createElement("label");
+            valueLabel.className = "value";
+            valueLabel.innerHTML = input.value;
+
+if (type == "range") {
+            input.addEventListener("input", () => {
                 valueLabel.innerHTML = input.value;
-                input.addEventListener("input", () => {
-                    valueLabel.innerHTML = input.value;
-         let value = type == "range" ? parseFloat(input.value) : input.value;
+                let value = type == "range" ? parseFloat(input.value) : input.value;
                 let [address, name] = address_name.split(" ");
                 console.log(`Sending OSC to ${address} with args: [${name}, ${value}]`);
                 sendOsc(relay, oscIp, parseInt(oscPort), address, ["pressed", name,value]);
-     
+            });
+} else {
+            input.addEventListener("click", (e) => { 
+                let fields = input.value.split(" ");
+alert(fields);                let address = fields.shift(0);
+              alert([address,fields]);  
+console.log(`Sending OSC to ${address} with args: [${fields}]`);
+                sendOsc(relay, oscIp, parseInt(oscPort), address, fields);
+            });
+}
 
-
-
-                });
-            }
             input.name = p;
             row.appendChild(input);
             if (valueLabel)     row.appendChild(valueLabel);
