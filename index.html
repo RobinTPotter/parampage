@@ -7,24 +7,36 @@
     <title>My Param Page</title>
 
     <style>
+        /* Scale the page content up while keeping the image at 20% width. */
+        body {
+            margin: 0;
+            padding: 20px;
+            font-size: 2em;
+        }
+
         img {
             width: 20%;
+            margin: 20px auto;
+            display: block;
         }
 
         form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
         .param-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 20px;
         }
 
         .param-row .name {
-            width: 140px;
+            width: 280px;
             flex-shrink: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -34,19 +46,30 @@
         .param-row input {
             flex: 1 1 auto;
             min-width: 0;
+            padding: 10px;
+            font-size: 1em;
         }
 
         .param-row .value {
-            width: 50px;
+            width: 100px;
             flex-shrink: 0;
             text-align: right;
         }
 
         .param-row button {
-            width: 48px;
-            height: 48px;
+            width: 96px;
+            height: 96px;
             flex-shrink: 0;
-            font-size: 1.2em;
+            font-size: 1em;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        p {
+            text-align: center;
         }
     </style>
 </head>
