@@ -1,19 +1,28 @@
-<html>
+<!doctype html>
+<html lang="en">
 
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>My Param Page</title>
+
     <style>
-        img { width:20%; align: center }
+        img {
+            width: 20%;
+        }
+
         form {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
+
         .param-row {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .param-row .name {
             width: 140px;
             flex-shrink: 0;
@@ -21,15 +30,18 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
         .param-row input {
             flex: 1 1 auto;
             min-width: 0;
         }
+
         .param-row .value {
             width: 50px;
             flex-shrink: 0;
             text-align: right;
         }
+
         .param-row button {
             width: 48px;
             height: 48px;
@@ -40,99 +52,133 @@
 </head>
 
 <body>
-<img src="parampage.jpg">
-<script>
-    // Browsers can't open raw UDP sockets, so we POST JSON to a local
-    // HTTP relay (see osc_relay.py) which forwards it as a real OSC/UDP packet.
-    function sendOsc(relayUrl, ip, port, address, args) {
-        return fetch(relayUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ip, port, address, args })
-        }).catch(err => console.error("OSC send failed:", err));
-    }
+    <img src="parampage.jpg" alt="Param page">
 
-    let params = (new URLSearchParams(window.location.search).get("params") || "range:0:100:1:/param a1,button:/voice pressed sine,button:/note pressed 60,button:/note released 60").split(",");
-    // sendto identifies the real OSC/UDP target; relay is the local HTTP bridge
-    let sendto = (new URLSearchParams(window.location.search).get("sendto") || "192.168.1.174:57120");
-    let [oscIp, oscPort] = sendto.replace(/^https?:\/\//, "").split(":");
-    let relay = (new URLSearchParams(window.location.search).get("relay") || "/osc");
-    let body = document.body;
-    body.innerHTML = '<img src="parampage.jpg"><h1>Parameters</h1><ul>' + params.map(p => "<li>" + p + "</li>").join("") + "</ul>";
-    body.innerHTML += "<h1>Send To</h1><p>" + sendto + "</p>";
-    setTimeout(() => {
-        body.innerHTML ='<img src="parampage.jpg">';
-        let form = document.createElement("form");
-        body.appendChild(form);
-        params.forEach(p => {
-            // split params into parts by . type.min.max.division.address
-            // if type is slider, use min, max, and division for input attributes
-            // and create a slider input element
-            // labeleld for the address
-            let parts = p.split(":");
-            let type = parts[0];
-            let min = parts[1];
-            let max = parts[2];
-            let division = parts[3];
-            let address_name = parts[4]; 
-            
-            let row = document.createElement("div");
-            row.className = "param-row";
-            form.appendChild(row);
+    <script>
+        // Browsers cannot open raw UDP sockets. Instead, send JSON to a local
+        // HTTP relay (see osc_relay.py), which forwards it as an OSC/UDP packet.
+        function sendOsc(relayUrl, ip, port, address, args) {
+            return fetch(relayUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ip, port, address, args })
+            }).catch((error) => console.error("OSC send failed:", error));
+        }
 
-            let label = document.createElement("label");
-            label.className = "name";
-            label.innerHTML = address_name;
-            row.appendChild(label);
+        const query = new URLSearchParams(window.location.search);
 
-            let input = document.createElement("input");
-            input.type = type;
-            let valueLabel = null; 
-            if (type == "range") {
-                input.min = min;
-                input.max = max;
-                input.step = division;
-            }
+        // Each comma-separated parameter uses one of these formats:
+        //   range:min:max:step:/address name
+        //   button:/address argument1 argument2
+        const params = (
+            query.get("params") ||
+            "range:0:100:1:/param a1,button:/voice pressed sine,button:/note pressed 60,button:/note released 60"
+        ).split(",");
 
-            input.value = min;
-            // add another label for the value which needs to update
-            valueLabel = document.createElement("label");
-            valueLabel.className = "value";
-            valueLabel.innerHTML = input.value;
+        // `sendto` is the OSC/UDP destination. `relay` is the local HTTP bridge.
+        const sendTo = query.get("sendto") || "192.168.1.174:57120";
+        const [oscIp, oscPort] = sendTo
+            .replace(/^https?:\/\//, "")
+            .split(":");
+        const relay = query.get("relay") || "/osc";
+        const body = document.body;
 
-if (type == "range") {
-            input.addEventListener("input", () => {
-                valueLabel.innerHTML = input.value;
-                let value = type == "range" ? parseFloat(input.value) : input.value;
-                let [address, name] = address_name.split(" ");
-                console.log(`Sending OSC to ${address} with args: [${name}, ${value}]`);
-                sendOsc(relay, oscIp, parseInt(oscPort), address, ["pressed", name,value]);
+        // Show a short configuration preview while the controls are being built.
+        body.innerHTML = `
+            <img src="parampage.jpg" alt="Param page">
+            <h1>Parameters</h1>
+            <ul>${params.map((param) => `<li>${param}</li>`).join("")}</ul>
+            <h1>Send To</h1>
+            <p>${sendTo}</p>
+        `;
+
+        // Keep the delay so the configuration preview remains visible briefly.
+        setTimeout(() => {
+            body.innerHTML = '<img src="parampage.jpg" alt="Param page">';
+
+            const form = document.createElement("form");
+            body.appendChild(form);
+
+            params.forEach((param) => {
+                const parts = param.split(":");
+                const type = parts[0];
+                const row = document.createElement("div");
+                row.className = "param-row";
+                form.appendChild(row);
+
+                const input = document.createElement("input");
+                input.type = type;
+                input.name = param;
+
+                // Range parameters contain separate min, max, step, and address
+                // fields. Button parameters store the complete OSC command after
+                // the type, so their remaining fields are treated as one value.
+                let addressName;
+                if (type === "range") {
+                    const [, min, max, step, address] = parts;
+                    addressName = address;
+                    input.min = min;
+                    input.max = max;
+                    input.step = step;
+                    input.value = min;
+                } else {
+                    addressName = parts.slice(1).join(":");
+                    input.value = addressName;
+                }
+
+                // The label displays the OSC address (and, for ranges, the name).
+                const nameLabel = document.createElement("label");
+                nameLabel.className = "name";
+                nameLabel.textContent = addressName || "Unnamed parameter";
+                row.appendChild(nameLabel);
+
+                if (type === "range") {
+                    const valueLabel = document.createElement("label");
+                    valueLabel.className = "value";
+                    valueLabel.textContent = input.value;
+
+                    // Send the updated numeric value whenever the slider moves.
+                    input.addEventListener("input", () => {
+                        valueLabel.textContent = input.value;
+                        const value = parseFloat(input.value);
+                        const [address, name] = addressName.split(" ");
+
+                        console.log(
+                            `Sending OSC to ${address} with args: [${name}, ${value}]`
+                        );
+                        sendOsc(
+                            relay,
+                            oscIp,
+                            parseInt(oscPort, 10),
+                            address,
+                            ["pressed", name, value]
+                        );
+                    });
+
+                    row.appendChild(input);
+                    row.appendChild(valueLabel);
+                } else {
+                    // Button values are formatted as: /address argument1 argument2.
+                    // Split off the OSC address before sending the remaining arguments.
+                    input.addEventListener("click", () => {
+                        const fields = input.value.split(" ");
+                        const address = fields.shift();
+
+                        console.log(`Sending OSC to ${address} with args:`, fields);
+                        sendOsc(
+                            relay,
+                            oscIp,
+                            parseInt(oscPort, 10),
+                            address,
+                            fields
+                        );
+                    });
+
+                    row.appendChild(input);
+                }
             });
-} else {
-            input.addEventListener("click", (e) => { 
-                let fields = input.value.split(" ");
-alert(fields);                let address = fields.shift(0);
-              alert([address,fields]);  
-console.log(`Sending OSC to ${address} with args: [${fields}]`);
-                sendOsc(relay, oscIp, parseInt(oscPort), address, fields);
-            });
-}
-
-            input.name = p;
-            row.appendChild(input);
-            if (valueLabel)     row.appendChild(valueLabel);
-            // send the current value to the osc server at the parameter's address
-//            let button = document.createElement("button");
-  //          button.type = "button";
-    //        button.innerHTML = ">";
-      //      button.addEventListener("click", () => {
-        //      });
-     //       row.appendChild(button);
-        });
-    }, 2000);
-</script>
-
-
+        }, 2000);
+    </script>
 </body>
 
 </html>
