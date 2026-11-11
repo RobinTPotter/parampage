@@ -50,6 +50,51 @@
             flex-shrink: 0;
             font-size: 1.2em;
         }
+
+        dialog {
+            width: min(90vw, 600px);
+            border: 0;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 24px #0005;
+        }
+
+        dialog::backdrop {
+            background: #0008;
+        }
+
+        .link-builder,
+        .link-builder-params {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .link-builder-actions,
+        .add-param-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .new-param {
+            display: flex;
+            gap: 8px;
+        }
+
+        .new-param input,
+        #generated-link {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #generated-link {
+            width: 100%;
+        }
+
+        .dialog-close {
+            margin-left: auto;
+        }
     </style>
 </head>
 
@@ -93,6 +138,128 @@
             <h1>Send To</h1>
             <p>${sendTo}</p>
         `;
+
+        function openLinkBuilder() {
+            const dialog = document.createElement("dialog");
+            dialog.setAttribute("aria-labelledby", "link-builder-title");
+
+            const builder = document.createElement("div");
+            builder.className = "link-builder";
+
+            const title = document.createElement("h2");
+            title.id = "link-builder-title";
+            title.textContent = "Create a new link";
+            builder.appendChild(title);
+
+            const instructions = document.createElement("p");
+            instructions.textContent = "Add parameters to include in the link. You can edit each parameter before creating the link.";
+            builder.appendChild(instructions);
+
+            const addActions = document.createElement("div");
+            addActions.className = "add-param-actions";
+
+            const paramList = document.createElement("div");
+            paramList.className = "link-builder-params";
+            paramList.setAttribute("aria-label", "Parameters in new link");
+
+            const linkInput = document.createElement("input");
+            linkInput.id = "generated-link";
+            linkInput.type = "url";
+            linkInput.readOnly = true;
+            linkInput.setAttribute("aria-label", "Generated link");
+
+            function updateLink() {
+                const nextUrl = new URL(window.location.href);
+                const values = Array.from(paramList.querySelectorAll("input"))
+                    .map((input) => input.value.trim())
+                    .filter(Boolean);
+                if (values.length) {
+                    nextUrl.searchParams.set("params", values.join(","));
+                } else {
+                    nextUrl.searchParams.delete("params");
+                }
+                linkInput.value = nextUrl.toString();
+            }
+
+            function addParam(type) {
+                const row = document.createElement("div");
+                row.className = "new-param";
+
+                const input = document.createElement("input");
+                input.type = "text";
+                input.setAttribute("aria-label", `${type} parameter`);
+                input.value = type === "range"
+                    ? "range:0:1:0.05:/param"
+                    : "button:/button";
+                input.addEventListener("input", updateLink);
+                row.appendChild(input);
+
+                const removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.textContent = "Remove";
+                removeButton.addEventListener("click", () => {
+                    row.remove();
+                    updateLink();
+                });
+                row.appendChild(removeButton);
+                paramList.appendChild(row);
+                updateLink();
+                input.focus();
+            }
+
+            const addButtonParam = document.createElement("button");
+            addButtonParam.type = "button";
+            addButtonParam.textContent = "button";
+            addButtonParam.addEventListener("click", () => addParam("button"));
+            addActions.appendChild(addButtonParam);
+
+            const addRangeParam = document.createElement("button");
+            addRangeParam.type = "button";
+            addRangeParam.textContent = "range";
+            addRangeParam.addEventListener("click", () => addParam("range"));
+            addActions.appendChild(addRangeParam);
+            builder.appendChild(addActions);
+            builder.appendChild(paramList);
+
+            const linkLabel = document.createElement("label");
+            linkLabel.htmlFor = "generated-link";
+            linkLabel.textContent = "New link";
+            builder.appendChild(linkLabel);
+            builder.appendChild(linkInput);
+
+            const actions = document.createElement("div");
+            actions.className = "link-builder-actions";
+
+            const copyButton = document.createElement("button");
+            copyButton.type = "button";
+            copyButton.textContent = "Copy link";
+            copyButton.addEventListener("click", async () => {
+                try {
+                    await navigator.clipboard.writeText(linkInput.value);
+                    copyButton.textContent = "Copied!";
+                } catch (error) {
+                    linkInput.select();
+                    console.error("Could not copy link:", error);
+                }
+            });
+            actions.appendChild(copyButton);
+
+            const closeButton = document.createElement("button");
+            closeButton.type = "button";
+            closeButton.className = "dialog-close";
+            closeButton.textContent = "Close";
+            closeButton.addEventListener("click", () => dialog.close());
+            actions.appendChild(closeButton);
+            builder.appendChild(actions);
+
+            dialog.appendChild(builder);
+            dialog.addEventListener("click", (event) => {
+                if (event.target === dialog) dialog.close();
+            });
+            body.appendChild(dialog);
+            updateLink();
+            dialog.showModal();
+        }
 
         // Keep the delay so the configuration preview remains visible briefly.
         setTimeout(() => {
@@ -179,6 +346,12 @@
                     row.appendChild(input);
                 }
             });
+
+            const createLinkButton = document.createElement("button");
+            createLinkButton.type = "button";
+            createLinkButton.textContent = "Create a new link";
+            createLinkButton.addEventListener("click", openLinkBuilder);
+            body.appendChild(createLinkButton);
         }, 2000);
     </script>
 </body>
