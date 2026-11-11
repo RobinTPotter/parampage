@@ -79,6 +79,7 @@
 
         .new-param {
             display: flex;
+            align-items: center;
             gap: 8px;
         }
 
@@ -90,6 +91,15 @@
 
         #generated-link {
             width: 100%;
+        }
+
+        .remove-param {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            padding: 0;
+            line-height: 1;
+            font-size: 1.2em;
         }
 
         .dialog-close {
@@ -196,7 +206,10 @@
 
                 const removeButton = document.createElement("button");
                 removeButton.type = "button";
-                removeButton.textContent = "Remove";
+                removeButton.className = "remove-param";
+                removeButton.textContent = "×";
+                removeButton.title = "Remove parameter";
+                removeButton.setAttribute("aria-label", "Remove parameter");
                 removeButton.addEventListener("click", () => {
                     row.remove();
                     updateLink();
